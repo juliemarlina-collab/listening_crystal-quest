@@ -1,0 +1,8 @@
+w1_c1.mp3 https://voa-audio.voanews.eu/vle/2016/04/14/442a6a50-693e-411f-8cff-99e40d16614c.mp3
+w1_c2.mp3 https://voa-audio.voanews.eu/vle/2016/11/14/65b768cd-1b20-4074-beb4-3279d8f8e715.mp3
+w1_c3.mp3 https://voa-audio.voanews.eu/vle/2017/01/18/b97c84f3-f68d-4b35-bf71-9c369a107e82.mp3
+w2_c1.mp3 https://voa-audio.voanews.eu/vle/2017/01/12/51393a0f-7412-4703-8f47-866cfd57955c.mp3
+w2_c2.mp3 https://voa-audio.voanews.eu/vle/2017/08/31/3bf697ff-3ef5-4d59-8dcd-52613e2e7e9d.mp3
+w2_c3.mp3 https://voa-audio.voanews.eu/vle/2017/09/05/676d9800-cee0-4a59-9e79-b9378e0061ad.mp3
+w3_c1.mp3 https://voa-audio.voanews.eu/vle/2025/01/07/191de2c9-f532-4ac6-bfb3-4c2a26adcc0b.mp3
+w3_c2.mp3 https://voa-audio.voanews.eu/vle/2016/05/10/1218eeec-46d7-476f-9689-0530315f048d.mp3
