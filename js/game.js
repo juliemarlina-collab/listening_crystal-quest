@@ -1,4 +1,4 @@
-/* Crystal Quest 2: Speak & Conquer - game engine (Three.js r128). Speaking missions: js/speaking.js */
+/* Crystal Quest: Listen & Leap - game engine (Three.js r128) */
 (function() {
   'use strict';
 
@@ -18,8 +18,8 @@
   // -------------------------------------------------------------------
   // 3. PERSISTENT STATE & CAMERA MODES
   // -------------------------------------------------------------------
-  const STORAGE_KEY = 'crystal_quest_speak_save_v1';
-  const RESULTS_KEY = 'crystal_quest_speak_results_v1';
+  const STORAGE_KEY = 'crystal_quest_listen_leap_save_v2';
+  const RESULTS_KEY = 'crystal_quest_results_v3';
   const PROFILE_KEY = 'crystal_quest_student_v3';
   const CAM_MODES = [
     { id: 'close', label: 'Cam: Close', dist: 6.2, height: 3.1, front: false },
@@ -35,10 +35,7 @@
     masterVolume: 1.0,
     musicEnabled: true,
     sfxEnabled: true,
-    saveTranscripts: true,
-    missionStars: {},
-    bonusDone: {},
-    badges: {},
+    unlimitedPlays: false,
     studentName: '',
     studentClass: '',
     levelLog: [],
@@ -73,10 +70,6 @@
       if (parsed.selectedHeroId) state.selectedHeroId = parsed.selectedHeroId;
       if (parsed.currentWorldId) state.currentWorldId = parsed.currentWorldId;
       if (typeof parsed.totalScore === 'number') state.totalScore = parsed.totalScore;
-      if (parsed.missionStars) state.missionStars = parsed.missionStars;
-      if (parsed.bonusDone) state.bonusDone = parsed.bonusDone;
-      if (parsed.badges) state.badges = parsed.badges;
-      if (typeof parsed.saveTranscripts === 'boolean') state.saveTranscripts = parsed.saveTranscripts;
       if (parsed.worldProgress) {
         for (const k of [1, 2, 3]) {
           if (parsed.worldProgress[k]) {
@@ -93,11 +86,7 @@
         selectedHeroId: state.selectedHeroId,
         currentWorldId: state.currentWorldId,
         totalScore: state.totalScore,
-        worldProgress: state.worldProgress,
-        missionStars: state.missionStars,
-        bonusDone: state.bonusDone,
-        badges: state.badges,
-        saveTranscripts: state.saveTranscripts
+        worldProgress: state.worldProgress
       }));
     } catch (err) {}
     updateMainMenuSummary();
@@ -316,17 +305,156 @@
     }
   }
 
-  // Speaking missions live in js/speaking.js (window.CQSpeak)
-  function stopSpeechAudio() {
-    if (window.CQSpeak) window.CQSpeak.stopAll();
-  }
-  function applyAudioSettings() {}
+  // Real recorded audio player (VOA Learning English MP3s, public domain).
+  // Tries the VOA file first, then a local copy in ./audio/ (upload the MP3s
+  // to your GitHub repo's audio folder if school Wi-Fi blocks VOA).
+  const voaAudio = document.getElementById('voa-audio');
+  let audioSources = [];
+  let audioSourceIdx = 0;
+  let audioClipId = null;
+  let audioWantsPlay = false;
 
-  // Main menu: test the microphone (and play a chime so students can check volume)
+  function fmtTime(sec) {
+    if (!isFinite(sec) || sec < 0) sec = 0;
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return m + ':' + String(s).padStart(2, '0');
+  }
+
+  function applyAudioSettings() {
+    voaAudio.volume = Math.max(0, Math.min(1, state.masterVolume));
+    const slow = document.getElementById('toggle-slow-audio');
+    voaAudio.playbackRate = slow && slow.checked ? 0.85 : 1.0;
+  }
+
+  function loadClipAudio(ch) {
+    if (audioClipId === ch.id) return;
+    stopSpeechAudio();
+    audioClipId = ch.id;
+    audioSources = [ch.audio, ch.local].filter(Boolean);
+    audioSourceIdx = 0;
+    voaAudio.src = audioSources[0];
+    voaAudio.load();
+    document.getElementById('audio-progress-bar').style.width = '0%';
+    document.getElementById('audio-time-text').textContent = '0:00 / ' + (ch.duration || '0:00');
+  }
+
+  function setAudioStatus(text) {
+    const el = document.getElementById('audio-status-text');
+    if (el) el.textContent = text;
+  }
+
+  function updatePlayButton() {
+    const crystal = state.activeCrystalObj;
+    const icon = document.getElementById('play-audio-icon');
+    const label = document.getElementById('play-audio-label');
+    const playsText = document.getElementById('audio-plays-text');
+    const midway = voaAudio.currentTime > 0 && !voaAudio.ended;
+    if (!voaAudio.paused) {
+      icon.textContent = '⏸️';
+      label.textContent = 'Pause';
+    } else if (midway) {
+      icon.textContent = '▶️';
+      label.textContent = 'Resume';
+    } else {
+      icon.textContent = '▶️';
+      label.textContent = crystal && crystal.playsUsed > 0 ? 'Play Again' : 'Play Audio';
+    }
+    if (playsText && crystal) {
+      playsText.textContent = state.unlimitedPlays
+        ? 'Practice mode: unlimited plays'
+        : 'Plays left: ' + Math.max(0, 2 - crystal.playsUsed);
+    }
+  }
+
+  function handlePlayButton() {
+    ensureAudioContext();
+    const crystal = state.activeCrystalObj;
+    if (!crystal) return;
+    if (!voaAudio.paused) {
+      voaAudio.pause();
+      return;
+    }
+    const midway = voaAudio.currentTime > 0 && !voaAudio.ended;
+    if (!midway) {
+      if (!state.unlimitedPlays && crystal.playsUsed >= 2 && !crystal.solved) {
+        showToast('You have used both plays for this recording. Answer from what you heard!');
+        return;
+      }
+      crystal.playsUsed++;
+      try { voaAudio.currentTime = 0; } catch (e) {}
+    }
+    applyAudioSettings();
+    audioWantsPlay = true;
+    setAudioStatus('Loading audio...');
+    voaAudio.play().catch(() => {
+      setAudioStatus('Tap Play again to start');
+    });
+    updatePlayButton();
+  }
+
+  voaAudio.addEventListener('error', () => {
+    if (!audioClipId) return;
+    if (audioSourceIdx < audioSources.length - 1) {
+      audioSourceIdx++;
+      voaAudio.src = audioSources[audioSourceIdx];
+      voaAudio.load();
+      if (audioWantsPlay) voaAudio.play().catch(() => {});
+      return;
+    }
+    audioWantsPlay = false;
+    const crystal = state.activeCrystalObj;
+    if (crystal && crystal.playsUsed > 0) crystal.playsUsed--; // refund the play
+    setAudioStatus('Audio could not load. Check the internet connection.');
+    showToast('⚠️ Audio could not load. Check Wi-Fi, or upload the MP3s to the audio/ folder.');
+    updatePlayButton();
+  });
+
+  voaAudio.addEventListener('playing', () => {
+    setAudioStatus(voaAudio.playbackRate < 1 ? 'Playing (slower)...' : 'Playing...');
+    document.getElementById('audio-wave-bars').classList.add('wave-playing');
+    setBgmDucking(true);
+    setHeroAnimState('listen', 600);
+    updatePlayButton();
+  });
+  voaAudio.addEventListener('pause', () => {
+    document.getElementById('audio-wave-bars').classList.remove('wave-playing');
+    setBgmDucking(false);
+    if (!voaAudio.ended) setAudioStatus('Paused');
+    if (player.animState === 'listen') setHeroAnimState('idle', 0);
+    updatePlayButton();
+  });
+  voaAudio.addEventListener('ended', () => {
+    audioWantsPlay = false;
+    setAudioStatus('Finished. Answer the question.');
+    document.getElementById('audio-wave-bars').classList.remove('wave-playing');
+    setBgmDucking(false);
+    updatePlayButton();
+  });
+  voaAudio.addEventListener('timeupdate', () => {
+    const d = voaAudio.duration;
+    const pct = d ? Math.min(100, (voaAudio.currentTime / d) * 100) : 0;
+    document.getElementById('audio-progress-bar').style.width = pct + '%';
+    document.getElementById('audio-time-text').textContent =
+      fmtTime(voaAudio.currentTime) + ' / ' + (d ? fmtTime(d) : (state.activeCrystalObj ? state.activeCrystalObj.challenge.duration : '0:00'));
+  });
+
+  function stopSpeechAudio() {
+    audioWantsPlay = false;
+    try { voaAudio.pause(); } catch (e) {}
+    const waveBars = document.getElementById('audio-wave-bars');
+    if (waveBars) waveBars.classList.remove('wave-playing');
+    setBgmDucking(false);
+  }
+
+  document.getElementById('btn-play-audio').addEventListener('click', handlePlayButton);
+  document.getElementById('toggle-slow-audio').addEventListener('change', applyAudioSettings);
+
+  // Sound check button on Main Menu: plays a chime so students can set their volume
   document.getElementById('btn-test-voice').addEventListener('click', () => {
     ensureAudioContext();
     playSfx('correct');
-    window.CQSpeak.micTest();
+    showToast('🔔 If you heard the chime, your sound is on. Use headphones for the listening crystals!');
   });
 
   // -------------------------------------------------------------------
@@ -623,8 +751,8 @@
       run: 'Running 🏃',
       jump: 'Leaping ⬆️',
       fall: 'Gliding 🪂',
-      listen: 'Planning 💭',
-      answer: 'Speaking 🎙️',
+      listen: 'Listening 🎧',
+      answer: 'Thinking 💡',
       collect: 'Got Crystal! 💎',
       celebrate: 'Victory! 🎉',
       damage: 'Ouch! 💥'
@@ -796,8 +924,6 @@
     waterfallParticles = [];
     waterWheels = [];
     swayers = [];
-    flames = [];
-    dragon = null;
     flowingWaters = [];
     ambientParticles = [];
     trailParticles = [];
@@ -1064,14 +1190,13 @@
   const HERO_POSES = ['idle', 'run', 'jump', 'fall', 'listen', 'answer', 'celebrate', 'back', 'damage'];
   const ART_FILES = [];
   ['aiden', 'luna', 'rex', 'mia'].forEach(h => HERO_POSES.forEach(p => {
-    if (p === 'damage' && (h === 'luna' || h === 'mia')) return; // no damage pose on these sheets
+    // every hero now has a damage pose (Mia's: mia_damage.webp)
     ART_FILES.push(h + '_' + p);
   }));
   ['enemy_slime', 'enemy_mushroom', 'enemy_sprite',
    'item_crystal_purple', 'item_crystal_blue', 'item_chest', 'item_chest_open', 'item_checkpoint',
    'item_portal_green', 'item_portal_blue', 'item_portal_purple', 'item_signpost', 'item_bounce_mushroom',
    'backdrop_w1', 'backdrop_w2', 'backdrop_w3'].forEach(n => ART_FILES.push(n));
-  ['dragon_idle', 'dragon_roar', 'dragon_fire', 'dragon_hit', 'dragon_calm', 'dragon_fly'].forEach(n => ART_FILES.push(n));
   const artTex = {};
   let ART_OK = false;
   const HERO_H = 2.4;
@@ -1234,9 +1359,7 @@
   // -------------------------------------------------------------------
   const MODELS_BASE = 'models/';
   const WORLD_SCENERY = {
-    1: { // Level 4: Innovation Isle
-      extra: ['fence_simple', 'fence_planks', 'log_stack', 'pot_large', 'stone_tallA', 'lily_large', 'campfire_stones'],
-      waterfall: true,
+    1: { // Whispering Woods
       features: ['tree_oak', 'tree_detailed', 'tree_default', 'tree_fat'],
       featureScale: [3.0, 3.6],
       small: ['mushroom_redGroup', 'flower_purpleA', 'flower_redA', 'flower_yellowA', 'plant_bushLarge', 'grass_large', 'stump_round', 'rock_smallA'],
@@ -1244,17 +1367,16 @@
       guardian: 'statue_head',
       topTint: 0x5ea548, cliffTint: 0x8d6e4c, waterTint: 0x2b9fd6
     },
-    2: { // Level 5: Global Community Hub
-      extra: ['tent_detailedOpen', 'tent_smallOpen', 'campfire_stones', 'fence_simple', 'sign', 'pot_large', 'log_stack', 'tree_oak', 'tree_default', 'tree_detailed', 'tree_fat'],
-      features: ['tree_oak', 'tree_default', 'tree_detailed', 'tree_fat'],
+    2: { // Echo Falls
+      features: ['tree_pineDefaultA', 'tree_pineTallA', 'tree_pineRoundA', 'stone_tallA'],
       featureScale: [3.0, 3.8],
       small: ['flower_yellowA', 'plant_bush', 'grass_large', 'mushroom_tanGroup', 'rock_smallA', 'lily_large'],
       smallScale: [2.2, 3.2],
       guardian: 'statue_head',
-      waterfall: false,
+      waterfall: true,
       topTint: 0x6aa86b, cliffTint: 0x7c8a99, waterTint: 0x1aa6d8
     },
-    3: { // Level 6: Future Voices Summit
+    3: { // Celestial Crystal Kingdom
       features: ['statue_column', 'statue_obelisk', 'statue_columnDamaged', 'tree_cone'],
       featureScale: [3.2, 4.2],
       small: ['flower_purpleA', 'flower_purpleB', 'flower_purpleC', 'grass_large', 'stone_smallA', 'statue_ring'],
@@ -1278,7 +1400,7 @@
     if (!/^https?:$/.test(location.protocol) || !THREE.GLTFLoader) return Promise.resolve(false);
     const names = new Set();
     Object.values(WORLD_SCENERY).forEach(w => {
-      w.features.concat(w.small, [w.guardian], w.extra || []).forEach(n => names.add(n));
+      w.features.concat(w.small, [w.guardian]).forEach(n => names.add(n));
     });
     const loader = new THREE.GLTFLoader();
     return Promise.all([...names].map(n => new Promise(res => {
@@ -1477,258 +1599,9 @@
     for (const s of swayers) {
       s.obj.rotation.z = Math.sin(elapsed * 1.2 + s.phase) * 0.025;
     }
-    updateDragon(dt, elapsed);
-    for (const f of flames) {
-      const k = 0.85 + Math.sin(elapsed * 14 + f.phase) * 0.12 + Math.sin(elapsed * 23 + f.phase) * 0.06;
-      f.obj.scale.set(k, 1 + (k - 0.85) * 1.6, k);
-    }
     for (const t of flowingWaters) {
       t.offset.y += dt * 1.4;
     }
-  }
-
-  // -------------------------------------------------------------------
-  // Speaking-quest set pieces (Kenney models):
-  //   Level 4 Innovation Isle  : waterfalls, workshop fences, log piles
-  //   Level 5 Community Hub    : tents, campfires + P / R / E / P posts
-  //   Level 6 Future Voices    : ring of columns + the crystal dragon
-  // -------------------------------------------------------------------
-  let flames = [];
-  const PREP_LETTERS = [['P', 'Point'], ['R', 'Reason'], ['E', 'Example'], ['P', 'Point again']];
-
-  function labelSprite(letter, word, colour) {
-    const c = document.createElement('canvas');
-    c.width = 256; c.height = 300;
-    const g = c.getContext('2d');
-    g.fillStyle = 'rgba(15,23,42,0.9)';
-    g.beginPath(); g.arc(128, 120, 104, 0, Math.PI * 2); g.fill();
-    g.lineWidth = 12; g.strokeStyle = colour; g.stroke();
-    g.fillStyle = colour;
-    g.font = 'bold 130px Fredoka, Arial, sans-serif';
-    g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.fillText(letter, 128, 126);
-    g.font = 'bold 40px Fredoka, Arial, sans-serif';
-    g.fillStyle = '#ffffff';
-    g.fillText(word, 128, 272);
-    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true }));
-    s.scale.set(1.5, 1.75, 1);
-    return s;
-  }
-
-  function addCampfire(x, y, z) {
-    placeModel('campfire_stones', x, y, z, 2.6, 0);
-    const flame = new THREE.Mesh(
-      new THREE.ConeGeometry(0.32, 0.9, 8),
-      new THREE.MeshBasicMaterial({ color: 0xffa531, transparent: true, opacity: 0.9 })
-    );
-    flame.position.set(x, y + 0.5, z);
-    const core = new THREE.Mesh(
-      new THREE.ConeGeometry(0.17, 0.55, 8),
-      new THREE.MeshBasicMaterial({ color: 0xfff1a8 })
-    );
-    core.position.set(x, y + 0.38, z);
-    worldGroup.add(flame, core);
-    flames.push({ obj: flame, phase: rnd() * 6 }, { obj: core, phase: rnd() * 6 });
-  }
-
-  function addPrepPost(x, y, z, idx) {
-    const [letter, word] = PREP_LETTERS[idx];
-    placeModel('sign', x, y, z, 3.4, 0);
-    const lab = labelSprite(letter, word, idx === 3 ? '#34d399' : '#fbbf24');
-    lab.position.set(x, y + 2.75, z);
-    worldGroup.add(lab);
-  }
-
-  function addLevelSetPiece(worldDef, i, islandZ) {
-    const y = 0.8;
-    if (worldDef.id === 1) {
-      // Innovation Isle: workshop yard with fences, log piles and pots
-      for (let z = islandZ + 4.6; z > islandZ - 5.2; z -= 1.95) {
-        placeModel(i % 2 ? 'fence_planks' : 'fence_simple', -5.0, y, z, 1.95, Math.PI / 2);
-      }
-      placeModel('log_stack', -3.9, y, islandZ + 4.4, 2.6, 0.4);
-      placeModel('pot_large', 4.3, y, islandZ + 3.6, 2.2);
-      placeModel('pot_large', 4.5, y, islandZ - 0.6, 1.8);
-    } else if (worldDef.id === 2) {
-      // Global Community Hub: tents, campfire + a P / R / E post before each bridge
-      placeModel(i % 2 ? 'tent_smallOpen' : 'tent_detailedOpen', 3.7, y, islandZ - 1.0, 3.3, -Math.PI / 2 + 0.35);
-      addCampfire(2.5, y, islandZ - 2.3);
-      for (let z = islandZ + 4.6; z > islandZ - 5.2; z -= 1.95) {
-        placeModel('fence_simple', -5.0, y, z, 1.95, Math.PI / 2);
-      }
-      placeModel('log_stack', -3.9, y, islandZ + 4.4, 2.6, 0.4);
-      addPrepPost(-3.0, y, islandZ - 5.2, i);
-    } else {
-      // Future Voices Summit: a ring of columns around each island
-      const n = 10;
-      for (let k = 0; k < n; k++) {
-        const a = (k / n) * Math.PI * 2;
-        const x = Math.cos(a) * 4.75;
-        const z = islandZ + Math.sin(a) * 5.4;
-        if (Math.abs(x) < 2.6) continue; // keep the path and bridges open
-        if (i === worldDef.challenges.length - 1 && x > 0 && Math.abs(z - islandZ) < 2.5) continue; // dragon's side
-        placeModel(k % 3 === 0 ? 'statue_columnDamaged' : 'statue_column', x, y, z, 3.8, 0);
-      }
-      if (i === worldDef.challenges.length - 1) addDragon(islandZ);
-    }
-  }
-
-  function addFinalSetPiece(worldDef, finalZ) {
-    const y = 1.0;
-    if (worldDef.id === 1) {
-      addCampfire(0, y, finalZ + 1.4);
-      for (let k = 0; k < 6; k++) placeModel('lily_large', range(-12, 12), -4.1, finalZ + range(-6, 6), range(3, 5));
-    } else if (worldDef.id === 2) {
-      addPrepPost(-3.4, y, finalZ - 1.0, 3);
-      addCampfire(0, y, finalZ + 1.4);
-      [[-3.8, 2.4], [3.8, 2.4], [3.8, -2.6]].forEach(([x, dz], k) => {
-        placeModel(k % 2 ? 'tent_smallOpen' : 'tent_detailedOpen', x, y, finalZ + dz, 3.2, x > 0 ? -Math.PI / 2 : Math.PI / 2);
-      });
-    } else {
-      for (let k = 0; k < 14; k++) {
-        const a = (k / 14) * Math.PI * 2;
-        const x = Math.cos(a) * 5.2, z = finalZ + Math.sin(a) * 5.2;
-        if (z > finalZ + 3.5 && Math.abs(x) < 2.8) continue; // summit entrance
-        placeModel(k % 4 === 0 ? 'statue_obelisk' : 'statue_column', x, y, z, k % 4 === 0 ? 4.4 : 4.6, 0);
-      }
-    }
-  }
-
-  // -------------------------------------------------------------------
-  // LEVEL 6 CRYSTAL DRAGON
-  // Hovers beside the last island and breathes fire across the path in a
-  // fixed rhythm (roar = warning, then fire). Touching the fire costs a heart
-  // and returns the hero to the checkpoint. It never reacts to speaking
-  // mistakes. Finishing the Voice Champion mission calms it and it flies away.
-  // -------------------------------------------------------------------
-  let dragon = null;
-  const DRAGON_H = 3.4;
-
-  function addDragon(islandZ) {
-    if (!ART_OK || !artTex.dragon_idle) return;
-    const sp = makeSprite('dragon_idle', DRAGON_H, 0.5);
-    const baseX = 6.4, baseY = 3.3, z = islandZ + 0.6;
-    sp.position.set(baseX, baseY, z);
-    worldGroup.add(sp);
-
-    // fire breath: a long cone pointing from the dragon's mouth across the island
-    const mk = (r, color, opacity) => {
-      const m = new THREE.Mesh(
-        new THREE.ConeGeometry(r, 11, 20, 1, true),
-        new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, side: THREE.DoubleSide })
-      );
-      m.rotation.z = -Math.PI / 2;            // tip points to +x (the dragon), wide end to -x
-      m.position.set(baseX - 6.6, 1.65, z);
-      m.visible = false;
-      worldGroup.add(m);
-      return m;
-    };
-    const flame = mk(1.15, 0xff6a13, 0.7);
-    const core = mk(0.55, 0xffe066, 0.85);
-    // warning strip on the ground so students can see where the fire lands
-    const strip = new THREE.Mesh(
-      new THREE.PlaneGeometry(10.5, 2.2),
-      new THREE.MeshBasicMaterial({ color: 0xff4d00, transparent: true, opacity: 0, depthWrite: false })
-    );
-    strip.rotation.x = -Math.PI / 2;
-    strip.position.set(0, 0.84, z);
-    worldGroup.add(strip);
-    dragon = { sprite: sp, flame, core, strip, baseX, baseY, z, mode: 'idle', t: 0, warned: false, pose: '', flip: null };
-  }
-
-  function dragonPose(name, flip) {
-    if (!dragon) return;
-    if (dragon.pose === name && dragon.flip === flip) return;
-    const base = artTex['dragon_' + name] || artTex.dragon_idle;
-    dragon.sprite.material.map = flip ? flippedTex(base) : base;
-    dragon.sprite.material.needsUpdate = true;
-    setSpriteSize(dragon.sprite, base, name === 'hit' || name === 'calm' ? DRAGON_H * 0.85 : DRAGON_H);
-    dragon.pose = name;
-    dragon.flip = flip;
-  }
-
-  function setDragonFire(on) {
-    dragon.flame.visible = dragon.core.visible = on;
-  }
-
-  function updateDragon(dt, elapsed) {
-    if (!dragon) return;
-    const d = dragon;
-    d.t += dt;
-    const busy = !state.isPlaying || state.isPaused || state.isListeningModalOpen;
-
-    if (d.mode === 'calm') {
-      dragonPose('calm', true);
-      d.sprite.position.y = d.baseY - 0.4 + Math.sin(elapsed * 2) * 0.08;
-      if (d.t > 2.8) { d.mode = 'leave'; d.t = 0; }
-      return;
-    }
-    if (d.mode === 'leave') {
-      dragonPose('fly', false);
-      d.sprite.position.x += dt * 7;
-      d.sprite.position.y += dt * 3.2;
-      d.sprite.material.opacity = Math.max(0, 1 - d.t / 3.5);
-      if (d.t > 3.6) {
-        worldGroup.remove(d.sprite, d.flame, d.core, d.strip);
-        dragon = null;
-      }
-      return;
-    }
-
-    // hover
-    d.sprite.position.y = d.baseY + Math.sin(elapsed * 2.4) * 0.25;
-    d.sprite.position.z = d.z + Math.sin(elapsed * 0.9) * 0.3;
-
-    if (busy) {
-      d.mode = 'idle'; d.t = 0;
-      setDragonFire(false);
-      d.strip.material.opacity = 0;
-      dragonPose('idle', true);
-      return;
-    }
-
-    if (d.mode === 'idle') {
-      dragonPose('idle', true);
-      setDragonFire(false);
-      d.strip.material.opacity = 0;
-      if (d.t > 3.2) { d.mode = 'roar'; d.t = 0; }
-    } else if (d.mode === 'roar') {
-      dragonPose('roar', true);
-      d.strip.material.opacity = 0.18 + Math.abs(Math.sin(elapsed * 10)) * 0.2; // warning flash
-      if (!d.warned && Math.abs(player.pos.z - d.z) < 9) {
-        d.warned = true;
-        showToast('🐉 The dragon roars! Wait for the fire to stop, then run past.');
-      }
-      if (d.t > 1.1) { d.mode = 'fire'; d.t = 0; playSfx('damage'); }
-    } else if (d.mode === 'fire') {
-      dragonPose('fire', true);
-      setDragonFire(true);
-      const flick = 0.9 + Math.sin(elapsed * 30) * 0.08;
-      d.flame.scale.set(flick, 1, flick);
-      d.flame.position.z = d.core.position.z = d.strip.position.z = d.sprite.position.z;
-      d.strip.material.opacity = 0.35;
-      // hit test: hero inside the fire lane on the island
-      if (player.invulnerableTimer <= 0 && player.pos.x < d.baseX - 0.5 &&
-          Math.abs(player.pos.z - d.sprite.position.z) < 1.25 && player.pos.y < 3.4) {
-        takePlayerDamage('🔥 Too hot! Wait for the dragon to stop breathing fire.');
-      }
-      if (d.t > 1.8) { d.mode = 'idle'; d.t = 0; }
-    }
-  }
-
-  function calmDragon(silent) {
-    if (!dragon) return;
-    setDragonFire(false);
-    dragon.strip.material.opacity = 0;
-    if (silent) {
-      worldGroup.remove(dragon.sprite, dragon.flame, dragon.core, dragon.strip);
-      dragon = null;
-      return;
-    }
-    dragon.mode = 'calm';
-    dragon.t = 0;
-    dragon.sprite.material.transparent = true;
-    setTimeout(() => showToast('🐉💜 Your voice calmed the crystal dragon! It flies away and the summit is safe.'), 1200);
   }
 
   let buildingWorldId = 1;
@@ -1788,7 +1661,7 @@
 
       // Main Sunlit Island Platform
       addPlatform(0, 0, islandZ, 10.5, 1.6, 12.0, worldDef.groundColor);
-      if (MODELS_OK) { decorateIsland(worldDef, islandZ, 10.5, 12.0, 0.8); addLevelSetPiece(worldDef, i, islandZ); }
+      if (MODELS_OK) decorateIsland(worldDef, islandZ, 10.5, 12.0, 0.8);
 
       // Decorative Trees / Waterfalls / Astral Towers on Island Edges
       addDecorativeScenery(worldDef, -4.1, 0.8, islandZ - 2.2, i);
@@ -1813,7 +1686,6 @@
       // Cute Patrolling Critter
       const enemyTypes = worldDef.id === 1 ? ['slime', 'mushroom'] : (worldDef.id === 2 ? ['mushroom', 'sprite'] : ['sprite', 'slime']);
       const eType = enemyTypes[i % enemyTypes.length];
-      if (!(worldDef.id === 3 && i === numChallenges - 1)) {
       const eMesh = createCuteEnemyMesh(eType);
       const eZ = islandZ + 0.2;
       eMesh.position.set(0, 0.8, eZ);
@@ -1828,7 +1700,6 @@
         speed: 1.3 + worldDef.id * 0.2,
         phase: i * 1.3
       });
-      }
 
       // Hidden Treasure Chests on bonus side islands
       const chestIndices = worldDef.chestIndices || [];
@@ -1925,7 +1796,6 @@
       coinsPlaced++;
     }
 
-    if (MODELS_OK) addFinalSetPiece(worldDef, finalZ);
     const portalGroup = new THREE.Group();
     portalGroup.position.set(0, 1.0, finalZ - 2.4);
     const portalArt = ['item_portal_green', 'item_portal_blue', 'item_portal_purple'][worldDef.id - 1];
@@ -2117,7 +1987,7 @@
   }
 
   // -------------------------------------------------------------------
-  // 9. INTERACTION & SPEAKING MISSIONS (see js/speaking.js)
+  // 9. INTERACTION & MUET-STYLE LISTENING CHALLENGE WORKFLOW
   // -------------------------------------------------------------------
   function findNearestListeningCrystal() {
     let nearest = null;
@@ -2138,8 +2008,17 @@
     if (nearCrystal) {
       openListeningModal(nearCrystal);
     } else {
-      showToast('Walk up to a glowing Voice Crystal & Guardian ahead!');
+      showToast('Walk up to a glowing Listening Crystal & Guardian ahead!');
     }
+  }
+
+  function shuffledOrder(n) {
+    const arr = Array.from({ length: n }, (_, i) => i);
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
   }
 
   function openListeningModal(crystalObj) {
@@ -2147,76 +2026,91 @@
     state.activeCrystalObj = crystalObj;
     keys.up = keys.down = keys.left = keys.right = false;
 
+    if (typeof crystalObj.qIndex !== 'number') crystalObj.qIndex = 0;
+    if (typeof crystalObj.playsUsed !== 'number') crystalObj.playsUsed = 0;
+    if (!crystalObj.orders) crystalObj.orders = crystalObj.challenge.questions.map(q => shuffledOrder(q.choices.length));
+    if (crystalObj.solved) crystalObj.qIndex = 0; // review mode
+
     player.pos.set(crystalObj.x - 1.35, crystalObj.y, crystalObj.z + 0.4);
     player.facingAngle = 0.35;
     state.currentCheckpoint = { x: crystalObj.x, y: crystalObj.y, z: crystalObj.z + 2.2 };
 
     const worldDef = WORLDS.find(w => w.id === state.currentWorldId);
-    window.CQSpeak.open({
-      mission: crystalObj.challenge,
-      index: crystalObj.index,
-      total: worldDef.challenges.length,
-      review: crystalObj.solved,
-      onComplete: result => {
-        const pts = crystalObj.solved ? 0 : result.stars * 100;
-        logMission(result, pts);
-        if (!crystalObj.solved) {
-          state.levelScore += pts;
-          state.totalScore += pts;
-          state.missionStars[result.missionId] = Math.max(state.missionStars[result.missionId] || 0, result.stars);
-          completeCrystal(crystalObj);
-          showToast(crystalObj.challenge.unlock || '🌉 Bridge unlocked!');
-        } else {
-          showToast('✨ Great practice!');
-        }
-        updateHUD();
-      },
-      onBonus: result => {
-        const b = crystalObj.challenge.bonus || {};
-        const pts = b.points || 100;
-        logMission(result, pts);
-        state.levelScore += pts;
-        state.totalScore += pts;
-        state.bonusDone[crystalObj.challenge.id] = true;
-        if (/badge/i.test(b.label || '')) state.badges.voiceChampion = true;
-        spawnHeroBurst(18, 0xfbbf24);
-        showToast(`⭐ Bonus complete! ${b.label || ''}`);
-        updateHUD();
-        saveProgress();
-      },
-      onClose: () => {
-        state.isListeningModalOpen = false;
-        if (player.animState === 'listen' || player.animState === 'answer') setHeroAnimState('idle', 0);
-      }
+    const ch = crystalObj.challenge;
+
+    document.getElementById('listen-badge').textContent = `Crystal ${crystalObj.index + 1} of ${worldDef.challenges.length}`;
+    document.getElementById('listen-skill-tag').textContent = ch.skill + ' • ' + ch.duration;
+    document.getElementById('listen-title').textContent = ch.title;
+    document.getElementById('listen-speaker').textContent = '🗣️ ' + ch.speaker + (crystalObj.solved ? '  (review mode: no points)' : '');
+    document.getElementById('listen-source-link').href = ch.source;
+
+    loadClipAudio(ch);
+    applyAudioSettings();
+    setAudioStatus(voaAudio.currentTime > 0 && !voaAudio.ended ? 'Paused' : 'Ready');
+    updatePlayButton();
+    renderQuestion();
+
+    document.getElementById('modal-listening').classList.remove('hidden');
+  }
+
+  function renderQuestion() {
+    const crystalObj = state.activeCrystalObj;
+    const ch = crystalObj.challenge;
+    const q = ch.questions[crystalObj.qIndex];
+    state.activeChallengeAttempt = 1;
+
+    document.getElementById('listen-qnum').textContent = `Question ${crystalObj.qIndex + 1} of ${ch.questions.length} • ${q.skill}`;
+    document.getElementById('listen-question').textContent = q.q;
+    document.getElementById('listen-attempt-indicator').textContent = crystalObj.solved ? 'Review' : 'Try 1 of 2 (+100 pts)';
+
+    document.getElementById('listen-feedback-box').classList.add('hidden');
+    document.getElementById('listen-transcript-box').classList.add('hidden');
+    document.getElementById('btn-listen-continue').classList.add('hidden');
+
+    const grid = document.getElementById('listen-choices');
+    grid.innerHTML = '';
+    const order = crystalObj.orders[crystalObj.qIndex];
+    order.forEach((origIdx, pos) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.dataset.orig = String(origIdx);
+      btn.className = 'crystal-btn text-left p-3 rounded-2xl bg-slate-900/95 hover:bg-purple-900/70 border-2 border-purple-400/45 text-sm font-semibold text-slate-100 transition flex items-start gap-2.5';
+      const letter = document.createElement('span');
+      letter.className = 'shrink-0 w-6 h-6 rounded-lg bg-purple-600/70 text-white text-xs font-extrabold flex items-center justify-center';
+      letter.textContent = 'ABC'[pos];
+      const text = document.createElement('span');
+      text.className = 'flex-1';
+      text.textContent = q.choices[origIdx];
+      btn.append(letter, text);
+      btn.addEventListener('click', () => handleAnswerSelection(origIdx, btn));
+      grid.appendChild(btn);
     });
   }
 
-  // Hero pose follows the speaking panel
-  function speakingPhase(phase) {
-    if (phase === 'speak') setHeroAnimState('answer', 9999);
-    else if (phase === 'listen') setHeroAnimState('listen', 9999);
-    else setHeroAnimState('idle', 0);
+  function revealEvidence(q) {
+    document.getElementById('listen-transcript-box').classList.remove('hidden');
+    document.getElementById('listen-transcript-text').textContent = q.evidence;
   }
 
-  function logMission(r, points) {
+  function markButton(btn, kind) {
+    const base = 'text-left p-3 rounded-2xl border-2 text-sm font-semibold flex items-start gap-2.5 ';
+    if (kind === 'correct') btn.className = base + 'bg-emerald-600/85 border-emerald-300 text-white';
+    if (kind === 'wrong') btn.className = base + 'bg-rose-950/85 border-rose-400/60 text-rose-200 opacity-75';
+  }
+
+  function logAnswer(q, correct, firstTry, points) {
+    const crystalObj = state.activeCrystalObj;
     const entry = {
       time: new Date().toISOString(),
       student: state.studentName || '',
       group: state.studentClass || '',
       world: state.currentWorldId,
-      mission: r.missionId + (r.bonus ? ' (bonus)' : ''),
-      title: r.title,
-      support: r.support,
-      supportsUsed: (r.supportsUsed || []).join(' / '),
-      mode: r.mode,
-      seconds: r.seconds,
-      words: r.words,
-      stars: r.stars,
-      points: points,
-      tries: r.tries,
-      selfCheck: Object.keys(r.checks).filter(k => r.checks[k]).join(' + '),
-      spotted: [r.autoSpotted.detail ? 'detail' : '', r.autoSpotted.structure ? 'structure' : ''].filter(Boolean).join(' + '),
-      transcript: state.saveTranscripts ? r.transcript : ''
+      clip: crystalObj.challenge.title,
+      question: crystalObj.qIndex + 1,
+      skill: q.skill,
+      correct: correct,
+      firstTry: firstTry,
+      points: points
     };
     state.levelLog.push(entry);
     try {
@@ -2226,7 +2120,76 @@
     } catch (e) {}
   }
 
-  function completeCrystal(crystalObj, silent = false) {
+  function finishQuestion(isLast) {
+    document.querySelectorAll('#listen-choices button').forEach(b => { b.disabled = true; });
+    const contBtn = document.getElementById('btn-listen-continue');
+    contBtn.textContent = isLast
+      ? (state.activeCrystalObj.solved ? 'Close Review' : '✨ Unlock Bridge & Continue →')
+      : 'Next Question →';
+    contBtn.classList.remove('hidden');
+  }
+
+  function handleAnswerSelection(selectedIndex, btnEl) {
+    const crystalObj = state.activeCrystalObj;
+    if (!crystalObj) return;
+    const ch = crystalObj.challenge;
+    const q = ch.questions[crystalObj.qIndex];
+    const isLast = crystalObj.qIndex === ch.questions.length - 1;
+    const review = crystalObj.solved;
+    const fbBox = document.getElementById('listen-feedback-box');
+    const fbTitle = document.getElementById('listen-feedback-title');
+    const fbBody = document.getElementById('listen-feedback-body');
+    fbBox.classList.remove('hidden');
+    setHeroAnimState('answer', 1.2);
+
+    if (selectedIndex === q.correct) {
+      playSfx('correct');
+      markButton(btnEl, 'correct');
+      let pts = 0;
+      if (!review) {
+        const firstTry = state.activeChallengeAttempt === 1;
+        pts = firstTry ? 100 : 50;
+        if (firstTry) state.firstAttemptCorrectCount++;
+        state.levelScore += pts;
+        state.totalScore += pts;
+        logAnswer(q, true, firstTry, pts);
+      }
+      fbBox.className = 'rounded-2xl p-3 text-sm space-y-1.5 border bg-emerald-950/90 border-emerald-400/60 text-emerald-100';
+      fbTitle.textContent = pts > 0 ? `✅ Correct! (+${pts} points)` : '✅ Correct!';
+      fbBody.textContent = 'Here is what you heard:';
+      revealEvidence(q);
+      spawnHeroBurst(10, 0xfbbf24);
+      finishQuestion(isLast);
+      updateHUD();
+      return;
+    }
+
+    playSfx('wrong');
+    markButton(btnEl, 'wrong');
+    btnEl.disabled = true;
+
+    if (state.activeChallengeAttempt === 1 && !review) {
+      state.activeChallengeAttempt = 2;
+      document.getElementById('listen-attempt-indicator').textContent = 'Try 2 of 2 (+50 pts)';
+      fbBox.className = 'rounded-2xl p-3 text-sm space-y-1 border bg-amber-950/90 border-amber-400/60 text-amber-100';
+      fbTitle.textContent = 'Not quite. One more try.';
+      fbBody.textContent = 'Hint: ' + q.hint + (state.unlimitedPlays || crystalObj.playsUsed < 2 ? ' You can play the recording again.' : '');
+      return;
+    }
+
+    // Second wrong try (or wrong in review): show the right answer and move on
+    document.querySelectorAll('#listen-choices button').forEach(b => {
+      if (Number(b.dataset.orig) === q.correct) markButton(b, 'correct');
+    });
+    if (!review) logAnswer(q, false, false, 0);
+    fbBox.className = 'rounded-2xl p-3 text-sm space-y-1.5 border bg-rose-950/90 border-rose-400/60 text-rose-100';
+    fbTitle.textContent = '❌ The correct answer is highlighted in green.';
+    fbBody.textContent = 'Read the evidence, then continue. No points for this question.';
+    revealEvidence(q);
+    finishQuestion(isLast);
+  }
+
+  function completeCrystal(crystalObj) {
     crystalObj.solved = true;
     state.challengesSolved++;
     for (const p of [crystalObj.bridgePlat, crystalObj.movePlat]) {
@@ -2239,38 +2202,81 @@
       crystalObj.gem.material.color.setHex(0xfbbf24);
       if (crystalObj.gem.material.emissive) crystalObj.gem.material.emissive.setHex(0xf59e0b);
     }
+    setHeroAnimState('celebrate', 2.8);
+    spawnHeroBurst(22, 0xfbbf24);
+    playSfx('chest');
+
     const worldDef = WORLDS.find(w => w.id === state.currentWorldId);
-    const allDone = state.challengesSolved >= worldDef.challenges.length;
-    if (allDone && portalObject) {
+    if (state.challengesSolved >= worldDef.challenges.length && portalObject) {
       portalObject.unlocked = true;
       portalObject.vortex.material.opacity = 0.95;
-    }
-    if (worldDef.id === 3 && crystalObj.index === worldDef.challenges.length - 1) calmDragon(silent);
-    if (!silent) {
-      setHeroAnimState('celebrate', 2.8);
-      spawnHeroBurst(22, 0xfbbf24);
-      playSfx('chest');
-      if (allDone) setTimeout(() => showToast('🌀 All three missions done! The portal is open.'), 2600);
+      showToast('🌀 All crystals restored! The portal is open.');
+    } else {
+      showToast('🌉 Bridge unlocked! Head to the next crystal.');
     }
     updateHUD();
     saveProgress();
   }
 
-  // Resume: missions finished in an earlier session stay finished
-  function applySavedMissions() {
-    for (const lc of listeningCrystals) {
-      if (state.missionStars[lc.challenge.id]) completeCrystal(lc, true);
+  function handleContinue() {
+    const crystalObj = state.activeCrystalObj;
+    if (!crystalObj) return;
+    const total = crystalObj.challenge.questions.length;
+    if (crystalObj.qIndex < total - 1) {
+      crystalObj.qIndex++;
+      renderQuestion();
+      return;
     }
+    const wasSolved = crystalObj.solved;
+    hideListeningModal();
+    if (!wasSolved) completeCrystal(crystalObj);
   }
 
+  // Step Back / Esc: if the current question is already answered, keep the result
+  // (move on, or finish the crystal) so a question can never be answered twice.
   function closeListeningModal() {
-    if (window.CQSpeak.isOpen()) window.CQSpeak.close();
-    state.isListeningModalOpen = false;
+    const crystalObj = state.activeCrystalObj;
+    const answered = !document.getElementById('btn-listen-continue').classList.contains('hidden');
+    if (crystalObj && answered) {
+      const total = crystalObj.challenge.questions.length;
+      if (crystalObj.qIndex < total - 1) {
+        crystalObj.qIndex++;
+      } else if (!crystalObj.solved) {
+        hideListeningModal();
+        completeCrystal(crystalObj);
+        return;
+      }
+    }
+    hideListeningModal();
   }
 
+  function hideListeningModal() {
+    stopSpeechAudio();
+    state.isListeningModalOpen = false;
+    document.getElementById('modal-listening').classList.add('hidden');
+    if (player.animState === 'listen') setHeroAnimState('idle', 0);
+  }
+
+  document.getElementById('btn-listen-close').addEventListener('click', closeListeningModal);
+  document.getElementById('btn-listen-continue').addEventListener('click', handleContinue);
+
+  // 10. LEVEL COMPLETION, STAR RATING & TEACHER RESULTS REPORT
   // -------------------------------------------------------------------
-  // 10. LEVEL COMPLETION & SPEAKING REPORT
-  // -------------------------------------------------------------------
+  function totalQuestions(worldDef) {
+    return worldDef.challenges.reduce((n, c) => n + c.questions.length, 0);
+  }
+
+  function skillBreakdown(log) {
+    const map = {};
+    for (const e of log) {
+      if (!map[e.skill]) map[e.skill] = { total: 0, first: 0, correct: 0 };
+      map[e.skill].total++;
+      if (e.firstTry) map[e.skill].first++;
+      if (e.correct) map[e.skill].correct++;
+    }
+    return map;
+  }
+
   function completeCurrentLevel() {
     state.isPlaying = false;
     playSfx('portal');
@@ -2280,9 +2286,13 @@
     state.levelScore += levelBonus;
     state.totalScore += levelBonus;
 
-    const missionIds = worldDef.challenges.map(c => c.id);
-    const starSum = missionIds.reduce((n, id) => n + (state.missionStars[id] || 0), 0);
-    const stars = Math.max(1, Math.round(starSum / missionIds.length));
+    const nQ = totalQuestions(worldDef);
+    const accuracyPct = Math.round((state.firstAttemptCorrectCount / nQ) * 100);
+    const coinRatio = state.coinsCollected / worldDef.totalCoins;
+
+    let stars = 1;
+    if (accuracyPct >= 60 && coinRatio >= 0.5) stars = 2;
+    if (accuracyPct >= 80 && coinRatio >= 0.75) stars = 3;
 
     const wp = state.worldProgress[state.currentWorldId];
     wp.completed = true;
@@ -2291,42 +2301,43 @@
     wp.coins = Math.max(wp.coins, state.coinsCollected);
     wp.chests = Math.max(wp.chests, state.chestsCollected);
     wp.solved = worldDef.challenges.length;
+
     saveProgress();
 
     const isFinalWorld = state.currentWorldId === 3;
     document.getElementById('results-crown').textContent = isFinalWorld ? '👑' : '🏆';
     document.getElementById('results-title').textContent = isFinalWorld
-      ? 'The Kingdom Can Speak Again!'
-      : `Level ${worldDef.level || state.currentWorldId}: ${worldDef.name} Complete!`;
+      ? 'Crystal Kingdom Restored!'
+      : `Level ${state.currentWorldId}: ${worldDef.name} Clear!`;
     document.getElementById('results-subtitle').textContent =
       (state.studentName ? state.studentName + (state.studentClass ? ' (' + state.studentClass + ')' : '') + ': ' : '') +
       (isFinalWorld
-        ? 'You reunited all three Voice Crystal shards.' + (state.badges.voiceChampion ? ' 🏅 Voice Champion!' : '')
-        : `Voice Crystal shard ${state.currentWorldId} restored! +300 points.`);
+        ? 'You restored all three Listening Crystals and opened the Grand Portal!'
+        : 'You opened the ancient portal and earned +300 Level Completion points!');
 
-    document.getElementById('results-stars').innerHTML =
-      [1, 2, 3].map(n => n <= stars ? '<span>⭐</span>' : '<span class="opacity-25">⭐</span>').join('');
+    const starsEl = document.getElementById('results-stars');
+    starsEl.innerHTML = [1, 2, 3].map(n => n <= stars ? '<span>⭐</span>' : '<span class="opacity-25">⭐</span>').join('');
+
     document.getElementById('results-score').textContent = state.levelScore.toLocaleString() + ' pts';
-    document.getElementById('results-accuracy').textContent = `${starSum} / ${missionIds.length * 3} ⭐`;
+    document.getElementById('results-accuracy').textContent = `${accuracyPct}% (${state.firstAttemptCorrectCount}/${nQ})`;
     document.getElementById('results-coins').textContent = `${state.coinsCollected} / ${worldDef.totalCoins}`;
     document.getElementById('results-chests').textContent = `${state.chestsCollected} / ${worldDef.totalChests}`;
 
-    // Per-mission summary (latest attempt of each mission this session)
-    const rows = worldDef.challenges.map(c => {
-      const tries = state.levelLog.filter(e => e.mission === c.id);
-      const last = tries[tries.length - 1];
-      const st = state.missionStars[c.id] || 0;
-      if (!last) {
-        return `<tr><td class="py-1 pr-2">${c.id} ${c.title}</td><td class="py-1 text-right">${'⭐'.repeat(st) || '-'}</td><td class="py-1 pl-2 text-slate-400">earlier session</td></tr>`;
-      }
-      const how = last.mode === 'typed' ? '⌨️ typed' : `🎙️ ${last.seconds}s`;
-      return `<tr><td class="py-1 pr-2">${c.id} ${c.title}</td><td class="py-1 text-right">${'⭐'.repeat(st)}</td><td class="py-1 pl-2 text-slate-300">${how} • ${last.support}</td></tr>`;
+    // Per-skill breakdown (first-try accuracy) for the lecturer
+    const sk = skillBreakdown(state.levelLog);
+    const rows = Object.keys(sk).map(name => {
+      const r = sk[name];
+      const pct = Math.round((r.first / r.total) * 100);
+      const color = pct >= 80 ? 'text-emerald-300' : pct >= 50 ? 'text-amber-300' : 'text-rose-300';
+      return `<tr><td class="py-1 pr-2">${name}</td><td class="py-1 text-right ${color} font-bold">${r.first}/${r.total} (${pct}%)</td></tr>`;
     }).join('');
-    document.getElementById('results-skills').innerHTML =
-      `<table class="w-full"><thead><tr class="text-purple-300"><th class="text-left font-semibold pb-1">Mission</th><th class="text-right font-semibold pb-1">Stars</th><th class="text-left font-semibold pb-1 pl-2">How / help</th></tr></thead><tbody>${rows}</tbody></table>`;
+    document.getElementById('results-skills').innerHTML = rows
+      ? `<table class="w-full"><thead><tr class="text-purple-300"><th class="text-left font-semibold pb-1">Listening skill</th><th class="text-right font-semibold pb-1">1st-try correct</th></tr></thead><tbody>${rows}</tbody></table>`
+      : '<div class="text-slate-400">No answers recorded.</div>';
 
     const nextBtn = document.getElementById('btn-results-next');
-    nextBtn.textContent = isFinalWorld ? '🎉 Play Level 1 Again' : `⏭️ Next Level →`;
+    nextBtn.textContent = isFinalWorld ? '🎉 Play Level 1 Again' : `⏭️ Next Enchanted World →`;
+
     document.getElementById('modal-results').classList.remove('hidden');
   }
 
@@ -2334,21 +2345,19 @@
     try { return JSON.parse(localStorage.getItem(RESULTS_KEY) || '[]'); } catch (e) { return []; }
   }
 
-  const REPORT_COLS = [
-    ['time', 'Time'], ['student', 'Student'], ['group', 'Class'], ['world', 'Level'], ['mission', 'Mission'],
-    ['title', 'Title'], ['support', 'Support'], ['supportsUsed', 'Supports viewed'], ['mode', 'Mode'],
-    ['seconds', 'Seconds'], ['words', 'Words'], ['stars', 'Stars'], ['points', 'Points'], ['tries', 'Tries'],
-    ['selfCheck', 'Student ticked'], ['spotted', 'Game spotted'], ['transcript', 'Transcript']
-  ];
   function resultsAsTSV(log) {
-    const clean = v => String(v === undefined ? '' : v).replace(/[\t\n\r]+/g, ' ');
-    return [REPORT_COLS.map(c => c[1]).join('\t')]
-      .concat(log.map(e => REPORT_COLS.map(c => clean(e[c[0]])).join('\t'))).join('\n');
+    const header = ['Time', 'Student', 'Class', 'World', 'Recording', 'Q#', 'Skill', 'Correct', 'First try', 'Points'];
+    const lines = log.map(e => [e.time, e.student, e.group, e.world, e.clip, e.question, e.skill,
+      e.correct ? 'Yes' : 'No', e.firstTry ? 'Yes' : 'No', e.points].join('\t'));
+    return [header.join('\t')].concat(lines).join('\n');
   }
+
   function resultsAsCSV(log) {
-    const esc = v => '"' + String(v === undefined ? '' : v).replace(/"/g, '""') + '"';
-    return [REPORT_COLS.map(c => esc(c[1])).join(',')]
-      .concat(log.map(e => REPORT_COLS.map(c => esc(e[c[0]])).join(','))).join('\n');
+    const esc = v => '"' + String(v).replace(/"/g, '""') + '"';
+    const header = ['Time', 'Student', 'Class', 'World', 'Recording', 'Q#', 'Skill', 'Correct', 'First try', 'Points'];
+    const lines = log.map(e => [e.time, e.student, e.group, e.world, e.clip, e.question, e.skill,
+      e.correct ? 'Yes' : 'No', e.firstTry ? 'Yes' : 'No', e.points].map(esc).join(','));
+    return [header.map(esc).join(',')].concat(lines).join('\n');
   }
 
   document.getElementById('btn-results-copy').addEventListener('click', async () => {
@@ -2368,7 +2377,7 @@
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     const who = (state.studentName || 'student').replace(/[^\w-]+/g, '_');
-    a.download = `CrystalQuest2_speaking_${who}.csv`;
+    a.download = `CrystalQuest_results_${who}.csv`;
     document.body.appendChild(a);
     a.click();
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
@@ -2428,7 +2437,7 @@
         <div class="space-y-2.5">
           <div class="relative w-full h-32 rounded-xl overflow-hidden border border-purple-400/30">
             <img src="${ART_OK ? ART_BASE + 'card_w' + w.id + '.webp' : w.thumb}" alt="${w.name}" class="w-full h-full object-cover" />
-            <span class="absolute top-2 left-2 bg-slate-950/85 text-amber-300 text-xs font-bold px-2.5 py-0.5 rounded-full border border-amber-400/40">Level ${w.level || w.id}</span>
+            <span class="absolute top-2 left-2 bg-slate-950/85 text-amber-300 text-xs font-bold px-2.5 py-0.5 rounded-full border border-amber-400/40">Level ${w.id}</span>
             <span class="absolute top-2 right-2 bg-slate-950/85 text-yellow-300 text-xs font-bold px-2 py-0.5 rounded-full">${starsStr}</span>
           </div>
           <div>
@@ -2472,7 +2481,7 @@
       const st = [1, 2, 3].map(n => n <= wp.stars ? '⭐' : '☆').join('');
       return `
         <div class="flex items-center justify-between bg-slate-950/60 px-3 py-1.5 rounded-lg border border-purple-500/20">
-          <span class="font-semibold text-purple-100">Lv.${w.level || w.id} ${w.name}</span>
+          <span class="font-semibold text-purple-100">Lv.${w.id} ${w.name}</span>
           <span class="text-amber-300 font-bold">${st} (${w.challenges.length} 🎧)</span>
         </div>
       `;
@@ -2487,7 +2496,7 @@
     document.getElementById('mirror-hero-img').src = heroDef.portrait;
     document.getElementById('hud-hero-name').textContent = heroDef.name;
     document.getElementById('hero-tag-name').textContent = `YOU (${heroDef.name})`;
-    document.getElementById('hud-level-badge').textContent = `Lv.${worldDef.level || worldDef.id} ${worldDef.name}`;
+    document.getElementById('hud-level-badge').textContent = `Lv.${worldDef.id} ${worldDef.name}`;
 
     const heartsEl = document.getElementById('hud-hearts');
     heartsEl.innerHTML = [1, 2, 3].map(n =>
@@ -2505,7 +2514,7 @@
     if (state.challengesSolved < worldDef.challenges.length) {
       objText.textContent = `Talk to Guardian ${state.challengesSolved + 1} of ${worldDef.challenges.length} ahead (Press E) to unlock the bridge!`;
     } else {
-      objText.textContent = `All ${worldDef.challenges.length} missions complete! Step into the glowing Portal ahead!`;
+      objText.textContent = `All ${worldDef.challenges.length} Listening Crystals restored! Step into the glowing Portal ahead!`;
     }
   }
 
@@ -2544,15 +2553,11 @@
     }
 
     buildWorld(worldId);
-    applySavedMissions();
     player.invulnerableTimer = 4.0;
     startBackgroundMusic(worldId);
     if (ART_OK) {
       const sp = document.getElementById('level-splash');
-      const wd = WORLDS.find(w => w.id === worldId);
       document.getElementById('level-splash-img').src = ART_BASE + 'card_w' + worldId + '.webp';
-      document.getElementById('level-splash-title').textContent = '';
-      document.getElementById('level-splash-sub').textContent = wd.objectiveDesc;
       sp.classList.remove('hidden');
       requestAnimationFrame(() => { sp.style.opacity = '1'; });
       clearTimeout(sp._t1); clearTimeout(sp._t2);
@@ -2763,7 +2768,6 @@
     }
     for (const ap of ambientParticles) {
       ap.mesh.position.y = ap.baseY + Math.sin(elapsed * 1.8 + ap.phase) * 0.45;
-      ap.mesh.visible = ap.mesh.position.distanceToSquared(camera.position) > 9;
     }
 
     // Update trail particles
@@ -2932,8 +2936,8 @@
       if (nearCrystal) {
         promptEl.classList.remove('hidden');
         document.getElementById('interaction-prompt-label').textContent = nearCrystal.solved
-          ? `Practise again with ${nearCrystal.challenge.guardian}`
-          : `Speak with ${nearCrystal.challenge.guardian} (Mission ${nearCrystal.index + 1})`;
+          ? `Replay ${nearCrystal.challenge.speaker}`
+          : `Listen to ${nearCrystal.challenge.speaker} (Crystal ${nearCrystal.index + 1})`;
       } else {
         promptEl.classList.add('hidden');
       }
@@ -2942,7 +2946,7 @@
         if (portalObject.unlocked) {
           completeCurrentLevel();
         } else {
-          showToast('🔒 Finish all three speaking missions to open the Portal!');
+          showToast('🔒 Complete all Listening Crystals in this world to activate the Portal!');
         }
       }
     }
@@ -3107,39 +3111,22 @@
     el.addEventListener('keydown', e => e.stopPropagation());
     el.addEventListener('keyup', e => e.stopPropagation());
   });
-  const tSave = document.getElementById('toggle-save-transcripts');
-  tSave.addEventListener('change', e => {
-    state.saveTranscripts = e.target.checked;
-    saveProgress();
-    showToast(state.saveTranscripts ? '📝 Transcripts will be saved on this device.' : '🔒 Transcripts will not be saved.');
-  });
-  const delBtn = document.getElementById('btn-delete-progress');
-  delBtn.addEventListener('click', () => {
-    if (!delBtn.dataset.armed) {
-      delBtn.dataset.armed = '1';
-      delBtn.textContent = '⚠️ Tap again to delete everything';
-      setTimeout(() => { delete delBtn.dataset.armed; delBtn.textContent = '🗑️ Delete my progress & transcripts'; }, 4000);
-      return;
-    }
-    try {
-      [STORAGE_KEY, RESULTS_KEY].forEach(k => localStorage.removeItem(k));
-    } catch (e) {}
-    window.CQSpeak.resetConsent();
-    location.reload();
+  document.getElementById('toggle-practice').addEventListener('change', (e) => {
+    state.unlimitedPlays = e.target.checked;
+    if (state.activeCrystalObj) updatePlayButton();
+    showToast(state.unlimitedPlays ? '🎓 Practice mode ON: unlimited plays.' : '📝 Test mode: two plays per recording.');
   });
 
   window.addEventListener('load', () => {
     loadSaveData();
     loadProfile();
-    tSave.checked = state.saveTranscripts;
-    window.CQSpeak.init({ onPhase: speakingPhase, toast: showToast, sfx: playSfx, volume: () => state.masterVolume });
     document.getElementById('toggle-touch').checked = state.touchControlsEnabled;
     Promise.all([loadArt(), loadModels()]).then(([ok]) => {
       buildWorld(state.currentWorldId || 1);
       updateMainMenuSummary();
       requestAnimationFrame(animate);
       if (!ok && !/^https?:$/.test(location.protocol)) {
-        setTimeout(() => showToast('🎨 Open the game from your GitHub Pages link to see the full artwork (the microphone also needs https).'), 1200);
+        setTimeout(() => showToast('🎨 Open the game from your GitHub Pages link to see the full artwork.'), 1200);
       }
     });
   });
