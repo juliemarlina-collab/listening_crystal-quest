@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="description" content="Crystal Quest: Listen &amp; Leap - a 3D listening-practice game with real VOA Learning English recordings and MUET-style questions." />
+  <meta name="description" content="Crystal Quest 2: Speak &amp; Conquer - a 3D speaking-practice game for beginner English and emerging MUET speakers." />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Crystal Quest: Listen &amp; Leap</title>
+  <title>Crystal Quest 2: Speak &amp; Conquer</title>
   <script src="js/lib/three.min.js"></script>
   <script src="js/lib/GLTFLoader.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -57,10 +57,10 @@
         </div>
       </div>
       <div class="h-6 w-px bg-purple-400/30"></div>
-      <div class="flex items-center gap-1.5" title="Listening Crystals Solved">
-        <span class="text-lg">🎧</span>
+      <div class="flex items-center gap-1.5" title="Speaking missions completed">
+        <span class="text-lg">🎙️</span>
         <div class="leading-tight">
-          <div class="text-[11px] uppercase tracking-wider text-cyan-300 font-semibold">Listening</div>
+          <div class="text-[11px] uppercase tracking-wider text-cyan-300 font-semibold">Missions</div>
           <div id="hud-listening" class="font-display font-bold text-sm text-cyan-200">0 / 5</div>
         </div>
       </div>
@@ -124,7 +124,7 @@
   <div id="hud-objective-wrap" class="hidden absolute top-16 sm:top-20 left-1/2 -translate-x-1/2 z-10 pointer-events-none w-full max-w-md px-3">
     <div class="glass-panel rounded-full px-4 py-1.5 text-center text-xs sm:text-sm font-medium text-purple-100 shadow-lg flex items-center justify-center gap-2">
       <span id="hud-objective-icon" class="text-amber-300">✨</span>
-      <span id="hud-objective-text">Approach the glowing Listening Crystal ahead and press E!</span>
+      <span id="hud-objective-text">Walk to the glowing Voice Crystal and Guardian ahead, then press E!</span>
     </div>
   </div>
 
@@ -132,7 +132,7 @@
   <div id="interaction-prompt" class="hidden absolute bottom-28 sm:bottom-12 left-1/2 -translate-x-1/2 z-20 pointer-events-auto">
     <button id="btn-interact-prompt" type="button" class="crystal-btn gold-border bg-gradient-to-r from-purple-700 via-indigo-700 to-purple-800 text-white font-display font-bold px-5 py-2.5 rounded-full shadow-2xl flex items-center gap-2.5 text-sm sm:text-base animate-bounce">
       <span class="bg-amber-400 text-slate-950 font-extrabold px-2 py-0.5 rounded-md text-xs">E</span>
-      <span id="interaction-prompt-label">Listen to Ancient Crystal</span>
+      <span id="interaction-prompt-label">Speak with the Guardian</span>
     </button>
   </div>
 
@@ -154,8 +154,8 @@
     <!-- Action Buttons (Interact + Jump) -->
     <div class="pointer-events-auto flex items-end gap-2.5">
       <button id="btn-touch-listen" type="button" class="crystal-btn w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-700 border-2 border-cyan-300 shadow-lg flex flex-col items-center justify-center text-white font-display font-bold">
-        <span class="text-xl leading-none">🎧</span>
-        <span class="text-[11px] mt-0.5">LISTEN</span>
+        <span class="text-xl leading-none">🎙️</span>
+        <span class="text-[11px] mt-0.5">TALK</span>
       </button>
       <button id="btn-touch-jump" type="button" class="crystal-btn w-20 h-20 rounded-3xl bg-gradient-to-br from-amber-400 to-orange-500 border-2 border-yellow-200 shadow-xl flex flex-col items-center justify-center text-slate-950 font-display font-extrabold">
         <span class="text-xl leading-none">⬆️</span>
@@ -173,17 +173,17 @@
         <!-- Left Column: Title, Story & Main Buttons -->
         <div class="lg:col-span-7 space-y-4 text-center lg:text-left">
           <div class="inline-flex flex-wrap items-center gap-2 px-3 py-1 rounded-full bg-purple-500/30 border border-purple-400/50 text-purple-100 text-xs font-semibold">
-            <span>✨ CEFR A2–B1 • MUET Band 2–3</span>
+            <span>🎙️ Beginner English • Emerging MUET speakers</span>
             <span>•</span>
-            <span>Real VOA audio • MUET-style questions • 3D worlds</span>
+            <span>9 speaking missions • PREP • 3D worlds</span>
           </div>
 
           <div>
             <h1 class="font-display text-3xl sm:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-amber-300 via-pink-300 to-cyan-300 bg-clip-text text-transparent drop-shadow">
-              CRYSTAL QUEST: LISTEN &amp; LEAP
+              CRYSTAL QUEST 2: SPEAK &amp; CONQUER
             </h1>
             <p class="text-xs sm:text-sm text-purple-100/95 mt-2 leading-relaxed">
-              Explore three 3D fantasy realms and restore the Listening Crystals. Every crystal plays a <strong>real recorded English conversation or talk</strong> from VOA Learning English. Read the questions, listen (two plays, like MUET), and answer to unlock the bridges!
+              <strong>The Lost Kingdom of Voices.</strong> The Voice Crystal has shattered into three shards. Explore three 3D lands, talk to the Guardians and <strong>speak</strong> to restore the shards. Choose your help (model, sentence starters, keywords or on your own), press Start and talk. Nobody scores your accent: you check your own answer.
             </p>
           </div>
 
@@ -191,12 +191,12 @@
           <div class="bg-slate-900/90 border border-cyan-400/50 rounded-2xl p-3 flex flex-wrap items-center justify-between gap-2">
             <div class="text-left">
               <div class="text-xs font-bold text-cyan-300 flex items-center gap-1.5">
-                <span>🎧 Sound check (headphones recommended)</span>
+                <span>🎙️ Microphone check</span>
               </div>
-              <div id="voice-engine-status" class="text-xs text-slate-300">Recordings stream from VOA Learning English. Internet needed.</div>
+              <div id="voice-engine-status" class="text-xs text-slate-300">Works best in Chrome or Edge (speech-to-text). Other browsers record your voice for playback, or you can type.</div>
             </div>
             <button id="btn-test-voice" type="button" class="crystal-btn px-3.5 py-2 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 font-display font-extrabold text-xs shadow">
-              🔔 Test Sound
+              🎙️ Test microphone
             </button>
           </div>
 
@@ -216,7 +216,7 @@
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
             <button id="btn-menu-play" type="button" class="crystal-btn col-span-1 sm:col-span-2 py-3.5 px-6 rounded-2xl bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-400 text-slate-950 font-display font-extrabold text-lg shadow-xl flex items-center justify-center gap-2">
               <span>⚔️</span>
-              <span id="label-play-btn">Play Adventure (Level 1)</span>
+              <span id="label-play-btn">Play Adventure (Level 4)</span>
             </button>
             <button id="btn-menu-continue" type="button" class="crystal-btn py-2.5 px-4 rounded-xl bg-emerald-600/90 hover:bg-emerald-500 border border-emerald-300/50 text-white font-display font-bold text-sm flex items-center justify-center gap-2">
               <span>▶️</span>
@@ -299,7 +299,7 @@
       <div class="flex items-center justify-between border-b border-purple-400/30 pb-3">
         <div>
           <h2 class="font-display text-2xl sm:text-3xl font-extrabold text-cyan-300">Select Enchanted World</h2>
-          <p class="text-xs sm:text-sm text-purple-200">Complete listening challenges to unlock bridges and activate each world's ancient portal!</p>
+          <p class="text-xs sm:text-sm text-purple-200">Finish three speaking missions in each land to restore a Voice Crystal shard and open the portal.</p>
         </div>
         <button id="btn-close-worlds" type="button" class="crystal-btn px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-bold text-slate-200">✕ Close</button>
       </div>
@@ -309,85 +309,110 @@
   </section>
 
   <!-- ===================================================================== -->
-  <!-- DOCKED LISTENING CHALLENGE PANEL (REAL VOA AUDIO, MUET-STYLE)         -->
+  <!-- SPEAKING MISSION PANEL (docked so the 3D Guardian stays visible)      -->
   <!-- ===================================================================== -->
-  <audio id="voa-audio" preload="none"></audio>
-  <section id="modal-listening" class="hidden absolute inset-x-0 bottom-0 z-30 flex flex-col items-center justify-end p-2 sm:p-4 pointer-events-none max-h-[86vh]">
-    <div class="glass-panel gold-border rounded-3xl max-w-3xl w-full p-4 sm:p-5 overflow-y-auto custom-scroll space-y-3 pointer-events-auto shadow-2xl">
+  <section id="modal-speaking" class="hidden absolute inset-x-0 bottom-0 z-30 flex flex-col items-center justify-end p-2 sm:p-4 pointer-events-none" aria-label="Speaking mission">
+    <div id="sp-scroll" class="sp-panel glass-panel gold-border pointer-events-auto custom-scroll">
       <!-- Header -->
-      <div class="flex items-start justify-between gap-2 border-b border-purple-400/30 pb-2.5">
-        <div class="flex items-center gap-2.5 min-w-0">
-          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-cyan-500 flex items-center justify-center text-xl shadow-md shrink-0">🎧</div>
+      <div class="sp-head">
+        <div class="sp-head-left">
+          <div class="sp-icon">🎙️</div>
           <div class="min-w-0">
-            <div class="flex flex-wrap items-center gap-2">
-              <span id="listen-badge" class="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/40">Crystal 1 of 3</span>
-              <span id="listen-skill-tag" class="text-xs text-cyan-300 font-semibold">Skill</span>
+            <div class="sp-tags"><span id="sp-badge" class="sp-badge">Mission</span><span id="sp-skill" class="sp-skill">Skill</span></div>
+            <h3 id="sp-title" class="font-display sp-title">Title</h3>
+            <div id="sp-guardian" class="sp-guardian">Guardian</div>
+          </div>
+        </div>
+        <button id="sp-close" type="button" class="sp-btn sp-btn-dark">Step Back</button>
+      </div>
+
+      <div id="sp-main">
+        <!-- Task -->
+        <div class="sp-card sp-task">
+          <p id="sp-prompt" class="sp-prompt">Prompt</p>
+          <div class="sp-row">
+            <button id="sp-hear" type="button" class="sp-btn sp-btn-soft sp-tts-btn">🔊 Hear the task</button>
+            <span id="sp-target" class="sp-target">🎯 Aim: 10–20 s</span>
+            <button id="sp-think" type="button" class="hidden sp-btn sp-btn-soft">⏳ Plan first</button>
+          </div>
+        </div>
+
+        <!-- PREP cards -->
+        <div id="sp-prep" class="hidden sp-prep"></div>
+
+        <!-- Support -->
+        <div class="sp-card">
+          <div class="sp-label">Choose your help</div>
+          <div id="sp-support-tabs" class="sp-tabs" role="group" aria-label="Support level">
+            <button type="button" data-mode="model">🎧 Model</button>
+            <button type="button" data-mode="starters">🧩 Starters</button>
+            <button type="button" data-mode="keywords">🔑 Keywords</button>
+            <button type="button" data-mode="independent">💪 On my own</button>
+          </div>
+          <div id="sp-support-box" class="sp-support-box"></div>
+        </div>
+
+        <!-- Speak -->
+        <div class="sp-card sp-speak">
+          <div class="sp-rec-row">
+            <button id="sp-rec" type="button" class="sp-rec"><span id="sp-rec-icon">🎙️</span><span id="sp-rec-label">Start speaking</span></button>
+            <div class="sp-timer">
+              <div class="sp-time-top"><span id="sp-time" class="font-display">0:00</span><span class="sp-time-hint">green = target time</span></div>
+              <div id="sp-time-zone-holder" class="sp-time-bar"><div class="sp-time-zone"></div><div id="sp-time-fill" class="sp-time-fill"></div></div>
+              <div id="sp-meter" class="hidden sp-meter"><div id="sp-meter-fill" class="sp-meter-fill"></div></div>
             </div>
-            <h3 id="listen-title" class="font-display text-base sm:text-lg font-bold text-white leading-tight">Title</h3>
-            <div id="listen-speaker" class="text-xs text-purple-200">Speakers</div>
           </div>
-        </div>
-        <button id="btn-listen-close" type="button" class="crystal-btn px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 shrink-0" title="Step back from crystal">Step Back</button>
-      </div>
+          <div id="sp-live-wrap" class="hidden sp-live"><span class="sp-live-tag">LIVE</span> <span id="sp-live"></span></div>
+          <div id="sp-status" class="sp-status">Press Start, then speak.</div>
+          <button id="sp-type-btn" type="button" class="sp-linkbtn">⌨️ Can't use the microphone? Type instead</button>
 
-      <!-- Audio Player -->
-      <div class="bg-slate-900/95 border border-cyan-400/45 rounded-2xl p-3 space-y-2">
-        <div class="flex flex-wrap items-center justify-between gap-2">
-          <div class="flex flex-wrap items-center gap-2">
-            <button id="btn-play-audio" type="button" class="crystal-btn px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 font-display font-extrabold text-sm flex items-center gap-2 shadow-md">
-              <span id="play-audio-icon">▶️</span>
-              <span id="play-audio-label">Play Audio</span>
-            </button>
-            <label class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 border border-purple-400/40 text-purple-200 text-xs font-semibold cursor-pointer">
-              <input id="toggle-slow-audio" type="checkbox" class="w-4 h-4 accent-amber-400" />
-              🐢 Slower (0.85x)
-            </label>
-          </div>
-          <div class="flex items-center gap-2">
-            <div id="audio-wave-bars" class="flex items-center gap-1 h-6 px-1">
-              <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+          <!-- One-time privacy notice -->
+          <div id="sp-consent" class="hidden sp-consent">
+            <div class="sp-consent-title">🔒 Before you speak</div>
+            <ul>
+              <li>Your browser will ask to use the <strong>microphone</strong>.</li>
+              <li><strong>Speech-to-text</strong> (if your browser has it) may send your voice to the browser company (e.g. Google) to turn it into words.</li>
+              <li>Any <strong>recording stays on this device</strong> so you can listen back. It is not uploaded or saved.</li>
+              <li>The game never scores your accent or pronunciation.</li>
+            </ul>
+            <div class="sp-row">
+              <button id="sp-consent-ok" type="button" class="sp-btn sp-btn-go">OK, start speaking</button>
+              <button id="sp-consent-type" type="button" class="sp-btn sp-btn-dark">I'd rather type</button>
             </div>
-            <span id="audio-status-text" class="text-xs font-medium text-cyan-300">Ready</span>
           </div>
         </div>
-        <div class="w-full bg-slate-950 rounded-full h-2.5 overflow-hidden border border-slate-800">
-          <div id="audio-progress-bar" class="bg-gradient-to-r from-cyan-400 via-purple-400 to-amber-400 h-full w-0 transition-all duration-200"></div>
-        </div>
-        <div class="text-xs text-slate-300 flex flex-wrap items-center justify-between gap-1">
-          <span id="audio-time-text">0:00 / 0:00</span>
-          <span id="audio-plays-text" class="text-amber-300 font-semibold">Plays left: 2</span>
-        </div>
-        <div class="text-xs text-slate-400 leading-snug">
-          Read the questions first, then listen. Like MUET, you get <strong class="text-slate-200">two plays</strong> per recording.
-          The transcript evidence unlocks after you answer.
-          <span class="block mt-0.5">Audio: <a id="listen-source-link" href="#" target="_blank" rel="noopener" class="text-cyan-300 underline">VOA Learning English</a> (public domain).</span>
+
+        <!-- Check -->
+        <div id="sp-check" class="hidden sp-card sp-check-card">
+          <div class="sp-label">Check your answer <span id="sp-mode-label" class="sp-mode"></span></div>
+          <div id="sp-playback-wrap" class="hidden sp-row">
+            <span class="sp-note">▶ Listen to yourself:</span>
+            <audio id="sp-playback" controls></audio>
+          </div>
+          <textarea id="sp-transcript" rows="3" class="sp-transcript" placeholder="Your words appear here. You can fix mistakes."></textarea>
+          <div class="sp-row"><button id="sp-recheck" type="button" class="sp-linkbtn">🔄 Check my edited words again</button></div>
+          <div id="sp-checklist" class="sp-checklist"></div>
+          <div class="sp-done-row">
+            <div id="sp-stars" class="sp-stars"></div>
+            <div class="sp-row">
+              <button id="sp-again" type="button" class="sp-btn sp-btn-dark">🔁 Try again</button>
+              <button id="sp-done" type="button" class="sp-btn sp-btn-go" disabled>✅ Restore the crystal</button>
+            </div>
+          </div>
+          <div id="sp-done-hint" class="sp-note"></div>
+          <div class="sp-note sp-small">Stars come from your own checklist, never from your accent. The words in <em>green</em> were spotted in your answer; you decide.</div>
         </div>
       </div>
 
-      <!-- Question -->
-      <div class="space-y-2">
-        <div class="flex items-center justify-between gap-2">
-          <span id="listen-qnum" class="text-xs font-bold uppercase tracking-wider text-purple-300">Question 1 of 3</span>
-          <span id="listen-attempt-indicator" class="text-xs text-amber-300 font-semibold">Try 1 of 2 (+100 pts)</span>
+      <!-- Bonus offer -->
+      <div id="sp-bonus-offer" class="hidden sp-card sp-bonus">
+        <div class="sp-label">⭐ Optional bonus</div>
+        <p id="sp-bonus-text" class="sp-prompt"></p>
+        <div class="sp-note">Reward: <strong id="sp-bonus-reward"></strong></div>
+        <div class="sp-row">
+          <button id="sp-bonus-go" type="button" class="sp-btn sp-btn-go">🎙️ Try the bonus</button>
+          <button id="sp-bonus-skip" type="button" class="sp-btn sp-btn-dark">No thanks, continue</button>
         </div>
-        <h4 id="listen-question" class="font-display text-base sm:text-lg font-bold text-amber-200 leading-snug">Question</h4>
-        <div id="listen-choices" class="grid grid-cols-1 gap-2"></div>
-      </div>
-
-      <!-- Feedback -->
-      <div id="listen-feedback-box" class="hidden rounded-2xl p-3 text-sm space-y-1.5 border">
-        <div id="listen-feedback-title" class="font-display font-bold text-base"></div>
-        <div id="listen-feedback-body" class="leading-relaxed"></div>
-        <div id="listen-transcript-box" class="hidden bg-slate-950/85 rounded-xl p-2.5 border border-purple-400/30 space-y-1 text-sm">
-          <div class="text-purple-300 font-bold uppercase tracking-wider text-xs">📜 Evidence from the recording</div>
-          <p id="listen-transcript-text" class="text-slate-100 italic"></p>
-        </div>
-      </div>
-
-      <div class="flex items-center justify-end">
-        <button id="btn-listen-continue" type="button" class="hidden crystal-btn w-full sm:w-auto px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-400 to-teal-500 text-slate-950 font-display font-extrabold text-sm shadow-xl">
-          Next Question →
-        </button>
       </div>
     </div>
   </section>
@@ -409,7 +434,7 @@
             <li><strong class="text-amber-300">W / A / S / D</strong> or <strong class="text-amber-300">Arrow Keys</strong>: Run &amp; steer hero</li>
             <li><strong class="text-amber-300">Spacebar</strong>: Jump (bounce high on red mushrooms!)</li>
             <li><strong class="text-amber-300">Drag Mouse</strong> or <strong class="text-amber-300">C Key</strong>: Orbit 360° / Switch Selfie Camera</li>
-            <li><strong class="text-amber-300">E Key</strong>: Talk to Crystal Guardian</li>
+            <li><strong class="text-amber-300">E Key</strong> / 🎙️ TALK: Speak with a Guardian</li>
           </ul>
         </div>
         <div class="bg-slate-900/80 p-4 rounded-2xl border border-purple-400/30 space-y-2">
@@ -417,7 +442,7 @@
           <ul class="space-y-1.5 text-slate-200">
             <li><strong class="text-amber-300">🎥 Cam Button</strong>: Switch between Close, Selfie Front, Action &amp; Top views</li>
             <li><strong class="text-amber-300">🪞 Mirror</strong>: Show or hide your Hero Mirror card</li>
-            <li><strong class="text-amber-300">🎧 Listening</strong>: Real VOA recordings. Read the question first, then press Play. Two plays per recording; tick 🐢 Slower if needed.</li>
+            <li><strong class="text-amber-300">🎙️ Speaking</strong>: Hear the task, choose your help, press Start and speak. Press Stop, fix the words if needed, then tick your checklist.</li><li><strong class="text-amber-300">⌨️ No microphone?</strong> Type instead (marked as a typed answer).</li>
           </ul>
         </div>
       </div>
@@ -425,9 +450,9 @@
       <div class="bg-slate-900/80 p-4 rounded-2xl border border-amber-400/30 space-y-2 text-xs sm:text-sm">
         <h3 class="font-display font-bold text-amber-300 text-base">🏆 Scoring &amp; Star Rating Rules</h3>
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-slate-200">
-          <div>✨ <strong>Correct, 1st try:</strong> +100 pts</div>
-          <div>✨ <strong>Correct, 2nd try:</strong> +50 pts</div>
-          <div>❌ <strong>Wrong twice:</strong> 0 pts (answer shown)</div>
+          <div>⭐ <strong>Meaningful attempt:</strong> 1 star</div>
+          <div>⭐ <strong>Reason / detail:</strong> +1 star</div>
+          <div>⭐ <strong>Target structure:</strong> +1 star (100 pts per star)</div>
           <div>💎 <strong>Crystal Coin:</strong> +10 pts</div>
           <div>🎁 <strong>Hidden Chest:</strong> +100 pts</div>
           <div>🌀 <strong>Level Clear:</strong> +300 pts</div>
@@ -435,8 +460,9 @@
       </div>
 
       <div class="bg-slate-900/80 p-4 rounded-2xl border border-cyan-400/30 space-y-1 text-xs sm:text-sm text-slate-300">
-        <h3 class="font-display font-bold text-cyan-300 text-base">🎙️ Audio credits</h3>
-        <p>All recordings and transcript extracts are from <a href="https://learningenglish.voanews.com" target="_blank" rel="noopener" class="text-cyan-300 underline">VOA Learning English</a>, whose texts and MP3s are in the public domain. Series used: <em>Let's Learn English</em> (Levels 1 &amp; 2) and <em>Education Tips</em>. Questions were written for this game.</p>
+        <h3 class="font-display font-bold text-cyan-300 text-base">🔒 Your voice &amp; privacy</h3>
+        <p>Speech-to-text uses your browser's speech service, which may send audio to the browser company (for example Google in Chrome). Recordings stay on this device for playback only and are never uploaded or saved. Progress and (optionally) transcripts are saved on this device only; delete them any time in Settings. The game never scores accent or pronunciation and does not give MUET bands.</p>
+        <p class="pt-1">3D scenery: Kenney Nature Kit (CC0). 3D engine: Three.js.</p>
       </div>
     </div>
   </section>
@@ -468,9 +494,10 @@
           <input id="toggle-sfx" type="checkbox" checked class="w-5 h-5 accent-amber-400 rounded" />
         </label>
         <label class="flex items-center justify-between bg-slate-900/80 p-3 rounded-xl border border-amber-400/40 cursor-pointer">
-          <span>🎓 Practice mode (unlimited plays, for revision)</span>
-          <input id="toggle-practice" type="checkbox" class="w-5 h-5 accent-amber-400 rounded" />
+          <span>📝 Save my transcripts on this device (for my lecturer's report)</span>
+          <input id="toggle-save-transcripts" type="checkbox" checked class="w-5 h-5 accent-amber-400 rounded" />
         </label>
+        <button id="btn-delete-progress" type="button" class="w-full text-left bg-rose-950/60 hover:bg-rose-900/70 p-3 rounded-xl border border-rose-400/40 text-rose-100 font-semibold">🗑️ Delete my progress &amp; transcripts</button>
         <label class="flex items-center justify-between bg-slate-900/80 p-3 rounded-xl border border-purple-400/30 cursor-pointer">
           <span>📱 Show On-Screen Touch Controls</span>
           <input id="toggle-touch" type="checkbox" class="w-5 h-5 accent-amber-400 rounded" />
@@ -519,7 +546,7 @@
           <div id="results-score" class="font-display font-bold text-lg text-amber-300">1,200</div>
         </div>
         <div>
-          <div class="text-purple-300 text-xs">1st-Attempt Accuracy</div>
+          <div class="text-purple-300 text-xs">Mission Stars</div>
           <div id="results-accuracy" class="font-display font-bold text-lg text-emerald-300">100%</div>
         </div>
         <div>
@@ -534,10 +561,10 @@
 
       <!-- Lecturer report -->
       <div class="text-left bg-slate-900/85 p-4 rounded-2xl border border-cyan-400/30 text-xs sm:text-sm space-y-2">
-        <div class="font-display font-bold text-cyan-300">📊 Listening skills report</div>
+        <div class="font-display font-bold text-cyan-300">📊 Speaking report</div>
         <div id="results-skills"></div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-          <button id="btn-results-copy" type="button" class="crystal-btn py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs">📋 Copy this world's results</button>
+          <button id="btn-results-copy" type="button" class="crystal-btn py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs">📋 Copy this level's results</button>
           <button id="btn-results-csv" type="button" class="crystal-btn py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs">⬇️ Download all results (CSV)</button>
         </div>
       </div>
@@ -558,7 +585,10 @@
 
   <!-- LEVEL INTRO SPLASH -->
   <div id="level-splash" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 transition-opacity duration-700" style="opacity:0">
-    <img id="level-splash-img" alt="Level intro" class="max-w-[94vw] max-h-[86vh] rounded-3xl gold-border shadow-2xl" />
+    <div class="cq-splash-card gold-border shadow-2xl">
+      <img id="level-splash-img" alt="Level intro" />
+      <div class="cq-splash-text"><h2 id="level-splash-title">Level 1</h2><p id="level-splash-sub"></p></div>
+    </div>
   </div>
 
   <!-- TOAST NOTIFICATION -->
@@ -568,6 +598,7 @@
   <!-- COMPLETE GAME ENGINE V2 (REALISTIC SUNLIT 3D + DUAL VOICE + HERO CAM) -->
   <!-- ===================================================================== -->
   <script src="js/data.js"></script>
+  <script src="js/speaking.js"></script>
   <script src="js/game.js"></script>
 </body>
 </html>
